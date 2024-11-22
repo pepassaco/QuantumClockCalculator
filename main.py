@@ -235,6 +235,27 @@ def progress_bar(current, total, start_time, bar_length=50, prefix='Progress:', 
     if current == total:
         print()
 
+def load_array(filename, directory='./data/'):
+    """
+    Load a numpy array from a file.
+    
+    Parameters:
+    -----------
+    filename : str
+        Name of the file (without .npy extension)
+    directory : str
+        Directory where to save the file (default: current directory)
+    """
+
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+    
+    # Create full path
+    full_path = os.path.join(directory, f"{filename}")
+    print("Looking for file:", full_path)
+    # Load array if exists, otherwise return empty array
+    return np.load(full_path) if os.path.exists(full_path) else np.array([])
+
 def save_array(array, filename, directory='.'):
     """
     Save a numpy array to a file.
@@ -254,10 +275,18 @@ def save_array(array, filename, directory='.'):
     
     # Create full path
     full_path = os.path.join(directory, f"{filename}.npy")
-    
+
     # Save the array
     np.save(full_path, array)
     #print(f"Array saved to: {full_path}")
+
+def load_data(prefix, directory='./data/'):
+    norms = load_array(prefix+"norms.npy", directory).tolist()
+    mus = load_array(prefix+"mus.npy", directory).tolist()
+    sigmas = load_array(prefix+"sigmas.npy", directory).tolist()
+    quotients = load_array(prefix+"quotients.npy", directory).tolist()
+
+    return [norms, mus, sigmas, quotients]
 
 def update_array(new_entry, filename, directory='.', axis=0):
     """
@@ -317,12 +346,31 @@ def main():
     phaseOp = True  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
     phasePsi = True  # Flag for turning the density matrix of the initial state into the kv-th phase state. Uniformly random density matrix if False
 
+    '''
+    # Paramters for studying large ||V||
+    '''
+
+    
+    # Paramters for studying medium ||V||
+    nNorms = int(1e3) # Number of different norms to study
+    normMin = 2
+    normMax = int(1e8)
+    logSep = True # True for logarithmic spacing between norms, False for linear spacing
+    rtol=1e-7
+    atol=1e-10
+
+    t_max = int(3e3) # Maximum time for numerical integration limit
+    
+
+    '''
+    # Paramters for studying small ||V||
     nNorms = int(1e3) # Number of different norms to study
     normMin = 1e-5
     normMax = 2
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
 
     t_max = int(2e4) # Maximum time for numerical integration limit
+    '''
 
     axvlineHypo = None
 
@@ -352,44 +400,42 @@ def main():
 
     normsV = np.geomspace(normMin, normMax, nNorms) if logSep else np.linspace(normMin, normMax, nNorms)
 
-    computedNorms = []
-    EXmu_norms = []
-    EXsigma_norms = []
-    quotSigmaMu2 = []
-
+    [computedNorms, EXmu_norms, EXsigma_norms, quotSigmaMu2] = load_data(name, './data/')
     start_time = time.time()
 
     for index, norm in enumerate(normsV):
         progress_bar(index, len(normsV), start_time)
 
-        # Calculate X operators
-        Xmu, Xsigma = calculate_X_operators(H, norm*Vbase, t_max=t_max)
-        
-        # Calculate expected values
-        exp_Xmu, exp_Xsigma = np.real(compute_expected_values(rho, Xmu, Xsigma))
+        if norm not in computedNorms:
+            # Calculate X operators
+            Xmu, Xsigma = calculate_X_operators(H, norm*Vbase, t_max=t_max, rtol=rtol, atol=atol)
+            
+            # Calculate expected values
+            exp_Xmu, exp_Xsigma = np.real(compute_expected_values(rho, Xmu, Xsigma))
 
-        computedNorms.append(norm)
-        EXmu_norms.append(exp_Xmu)
-        EXsigma_norms.append(exp_Xsigma)
-        quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
+            computedNorms.append(norm)
+            EXmu_norms.append(exp_Xmu)
+            EXsigma_norms.append(exp_Xsigma)
+            quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
 
-        save_array(computedNorms, name+"norms", directory='./data/')
-        save_array(EXmu_norms, name+"mus", directory='./data/')
-        save_array(EXsigma_norms, name+"sigmas", directory='./data/')
-        save_array(quotSigmaMu2, name+"quotients", directory='./data/')
+            save_array(computedNorms, name+"norms", directory='./data/')
+            save_array(EXmu_norms, name+"mus", directory='./data/')
+            save_array(EXsigma_norms, name+"sigmas", directory='./data/')
+            save_array(quotSigmaMu2, name+"quotients", directory='./data/')
 
-        create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
-                            err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'mu.pdf')
-        create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
-                            err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'sigma.pdf')
-        create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
-                            err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'quot.pdf')
+            create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
+                                err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'mu.pdf')
+            create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
+                                err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'sigma.pdf')
+            create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
+                                err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'quot.pdf')
 
 
     progress_bar(len(normsV), len(normsV), start_time)
-    print("Normas:", normsV)
-    print("Mus:", EXmu_norms)
-    print("Sigmas:", EXsigma_norms)
+    #print("Normas:", normsV)
+    #print("Mus:", EXmu_norms)
+    #print("Sigmas:", EXsigma_norms)
+    print("Done! :)")
 
     
 
