@@ -317,7 +317,7 @@ def main():
     phaseOp = True  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
     phasePsi = True  # Flag for turning the density matrix of the initial state into the kv-th phase state. Uniformly random density matrix if False
 
-    nNorms = 3#int(1e3) # Number of different norms to study
+    nNorms = int(1e3) # Number of different norms to study
     normMin = 1e-5
     normMax = 2
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
