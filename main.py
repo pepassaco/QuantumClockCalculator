@@ -195,6 +195,9 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         #print(f"Plot saved to: {save_path}")
 
+    plt.clf()
+    plt.close('all')
+
     return fig, ax
 
 def progress_bar(current, total, start_time, bar_length=50, prefix='Progress:', suffix='Complete'):
@@ -324,6 +327,7 @@ def main():
     axvlineHypo = None
 
     name = "phaseEigenstate_" if phaseOp else "random_"
+    logString = "logScale_" if  logSep else "linScale_"
     
     # Create Hamiltonian
     H = create_harmonic_oscillator(d,f)
@@ -375,11 +379,11 @@ def main():
         save_array(quotSigmaMu2, name+"quotients", directory='./data/')
 
         create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
-                            err=None, figure_size=(8, 6), save_path='./plots/'+name+'mu.pdf')
+                            err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'mu.pdf')
         create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
-                            err=None, figure_size=(8, 6), save_path='./plots/'+name+'sigma.pdf')
+                            err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'sigma.pdf')
         create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
-                            err=None, figure_size=(8, 6), save_path='./plots/'+name+'quot.pdf')
+                            err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'quot.pdf')
 
 
     progress_bar(len(normsV), len(normsV), start_time)
