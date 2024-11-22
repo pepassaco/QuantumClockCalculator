@@ -72,7 +72,7 @@ def integrand_Xsigma(t, H, V):
     """Integrand for Xsigma calculation"""
     return 2 * t * integrand_Xmu(t, H, V)
 
-def calculate_X_operators(H, V, t_max=10, rtol=1e-4, atol=1e-6):
+def calculate_X_operators(H, V, t_max=10, rtol=1e-4, atol=1e-2):
     """Calculate Xmu and Xsigma through numerical integration using solve_ivp"""
     d = H.shape[0]
     
@@ -120,7 +120,7 @@ def compute_expected_values(rho, Xmu, Xsigma):
     expected_Xsigma = np.trace(rho @ Xsigma)
     return expected_Xmu, expected_Xsigma
 
-def create_scientific_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xlabel="x", ylabel="y", 
+def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xlabel="x", ylabel="y", 
                          err=None, figure_size=(8, 6), save_path=None):
     """
     Create a publication-quality scientific plot.
@@ -185,7 +185,7 @@ def create_scientific_plot(x_data, y_data, axvlineHypo=None, logScale = False, t
     if title:
         ax.set_title(title)
     if logScale:
-        ax.set_yscale('log')
+        ax.set_xscale('log')
     # Adjust layout
     plt.tight_layout()
     
@@ -255,10 +255,6 @@ def save_array(array, filename, directory='.'):
     np.save(full_path, array)
     print(f"Array saved to: {full_path}")
 
-# Example usage:
-# save_array(Xmu, "Xmu_operator", "results")
-# save_array(exp_Xmu, "expected_Xmu", "results")
-
 def main():
     # System parameters
     d = 10  # Dimension of Hilbert space
@@ -324,17 +320,17 @@ def main():
     print("Mus:", EXmu_norms)
     print("Sigmas:", EXsigma_norms)
 
-    save_array(normsV, name+"normas")
-    save_array(EXmu_norms, name+"mus")
-    save_array(EXsigma_norms, name+"sigmas")
+    save_array(normsV, name+"norms", directory='./data/')
+    save_array(EXmu_norms, name+"mus", directory='./data/')
+    save_array(EXsigma_norms, name+"sigmas", directory='./data/')
 
     axvlineHypo = None
 
-    create_scientific_plot(normsV, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
+    create_plot(normsV, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
                          err=None, figure_size=(8, 6), save_path='./plots/'+name+'mu.pdf')
-    create_scientific_plot(normsV, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
+    create_plot(normsV, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
                          err=None, figure_size=(8, 6), save_path='./plots/'+name+'sigma.pdf')
-    create_scientific_plot(normsV, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
+    create_plot(normsV, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
                          err=None, figure_size=(8, 6), save_path='./plots/'+name+'quot.pdf')
     
     return H, V, Vbase, rho, Xmu, Xsigma, exp_Xmu, exp_Xsigma
