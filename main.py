@@ -174,7 +174,7 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
                    capsize=3, capthick=1, elinewidth=1, markersize=5,
                    label='Data')
     else:
-        ax.plot(x_data, y_data, 'o-', color='#1f77b4', markersize=5,
+        ax.plot(x_data, y_data, '-', color='#1f77b4', markersize=5,
                 label='Data')
     
     if axvlineHypo is not None:
@@ -193,7 +193,7 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
     # Save if path is provided
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Plot saved to: {save_path}")
+        #print(f"Plot saved to: {save_path}")
 
     return fig, ax
 
@@ -254,8 +254,57 @@ def save_array(array, filename, directory='.'):
     
     # Save the array
     np.save(full_path, array)
-    print(f"Array saved to: {full_path}")
+    #print(f"Array saved to: {full_path}")
 
+def update_array(new_entry, filename, directory='.', axis=0):
+    """
+    Updates a NumPy array stored in a .npy file by adding a new entry and saving it.
+    
+    Parameters:
+    filename (str): Path to the .npy file
+    new_entry (array-like): New data to append to the existing array
+    axis (int): Axis along which to append the new entry (default=0)
+    
+    Returns:
+    numpy.ndarray: The updated array
+    """
+
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+
+    # Create full path
+    full_path = os.path.join(directory, f"{filename}.npy")
+    
+    try:
+        # Load existing array
+        existing_array = np.load(full_path)
+        
+        # Convert new entry to numpy array if it isn't already
+        new_entry = np.array(new_entry)
+        
+        # Make sure new_entry has compatible shape
+        if axis == 0:
+            if existing_array.shape[1:] != new_entry.shape[1:]:
+                raise ValueError("Shape mismatch: new entry is not compatible with existing array")
+        else:
+            if existing_array.shape[:axis] != new_entry.shape[:axis] or \
+               existing_array.shape[axis+1:] != new_entry.shape[axis+1:]:
+                raise ValueError("Shape mismatch: new entry is not compatible with existing array")
+        
+        # Append new entry to existing array
+        updated_array = np.append(existing_array, new_entry, axis=axis)
+        
+        # Save updated array
+        np.save(full_path, updated_array)
+        
+        return updated_array
+        
+    except FileNotFoundError:
+        # If file doesn't exist, create new array from new_entry
+        new_array = np.array(new_entry)
+        np.save(full_path, new_array)
+        return new_array
+    
 def main():
     # System parameters
     d = 10  # Dimension of Hilbert space
@@ -265,12 +314,14 @@ def main():
     phaseOp = True  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
     phasePsi = True  # Flag for turning the density matrix of the initial state into the kv-th phase state. Uniformly random density matrix if False
 
-    nNorms = int(1e3) # Number of different norms to study
+    nNorms = 3#int(1e3) # Number of different norms to study
     normMin = 1e-5
     normMax = 2
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
 
     t_max = int(2e4) # Maximum time for numerical integration limit
+
+    axvlineHypo = None
 
     name = "phaseEigenstate_" if phaseOp else "random_"
     
@@ -297,6 +348,7 @@ def main():
 
     normsV = np.geomspace(normMin, normMax, nNorms) if logSep else np.linspace(normMin, normMax, nNorms)
 
+    computedNorms = []
     EXmu_norms = []
     EXsigma_norms = []
     quotSigmaMu2 = []
@@ -312,27 +364,34 @@ def main():
         # Calculate expected values
         exp_Xmu, exp_Xsigma = np.real(compute_expected_values(rho, Xmu, Xsigma))
 
+        computedNorms.append(norm)
         EXmu_norms.append(exp_Xmu)
         EXsigma_norms.append(exp_Xsigma)
         quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
+
+        save_array(computedNorms, name+"norms", directory='./data/')
+        save_array(EXmu_norms, name+"mus", directory='./data/')
+        save_array(EXsigma_norms, name+"sigmas", directory='./data/')
+        save_array(quotSigmaMu2, name+"quotients", directory='./data/')
+
+        create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
+                            err=None, figure_size=(8, 6), save_path='./plots/'+name+'mu.pdf')
+        create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
+                            err=None, figure_size=(8, 6), save_path='./plots/'+name+'sigma.pdf')
+        create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
+                            err=None, figure_size=(8, 6), save_path='./plots/'+name+'quot.pdf')
+
 
     progress_bar(len(normsV), len(normsV), start_time)
     print("Normas:", normsV)
     print("Mus:", EXmu_norms)
     print("Sigmas:", EXsigma_norms)
 
-    save_array(normsV, name+"norms", directory='./data/')
-    save_array(EXmu_norms, name+"mus", directory='./data/')
-    save_array(EXsigma_norms, name+"sigmas", directory='./data/')
+    
 
-    axvlineHypo = None
+    
 
-    create_plot(normsV, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
-                         err=None, figure_size=(8, 6), save_path='./plots/'+name+'mu.pdf')
-    create_plot(normsV, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
-                         err=None, figure_size=(8, 6), save_path='./plots/'+name+'sigma.pdf')
-    create_plot(normsV, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
-                         err=None, figure_size=(8, 6), save_path='./plots/'+name+'quot.pdf')
+    
     
     return H, V, Vbase, rho, Xmu, Xsigma, exp_Xmu, exp_Xsigma
 
