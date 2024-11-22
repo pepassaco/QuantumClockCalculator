@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import sys
 import time
+import os
 from scipy.linalg import expm
 from scipy.integrate import solve_ivp
 
@@ -192,7 +193,8 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
     # Save if path is provided
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
+        print(f"Plot saved to: {save_path}")
+
     return fig, ax
 
 def progress_bar(current, total, start_time, bar_length=50, prefix='Progress:', suffix='Complete'):
@@ -243,8 +245,7 @@ def save_array(array, filename, directory='.'):
     directory : str
         Directory where to save the file (default: current directory)
     """
-    import os
-    
+
     # Ensure the directory exists
     os.makedirs(directory, exist_ok=True)
     
@@ -259,17 +260,17 @@ def main():
     # System parameters
     d = 10  # Dimension of Hilbert space
     f = 10 # Frecuencia de H
-    ko = d-1  # Index for phase operator
-    kv = 0  # Index for initial density matrix
-    phaseOp = True  # Flag for V operator
-    phasePsi = True  # Flag for density matrix
+    ko = d-1  # Index for V's phase operator eigenstate
+    kv = 0  # Index for initial density matrix phase operator eigenstate
+    phaseOp = True  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
+    phasePsi = True  # Flag for turning the density matrix of the initial state into the kv-th phase state. Uniformly random density matrix if False
 
-    nNorms = 3
+    nNorms = int(1e3) # Number of different norms to study
     normMin = 1e-5
     normMax = 2
-    logSep = True
+    logSep = True # True for logarithmic spacing between norms, False for linear spacing
 
-    t_max = int(1e4)
+    t_max = int(2e4) # Maximum time for numerical integration limit
 
     name = "phaseEigenstate_" if phaseOp else "random_"
     
@@ -281,7 +282,7 @@ def main():
 
     '''
     if not phaseOp:
-        print("Operador V aleatorio:")
+        print("Random V operator:")
         print(V)
     '''
     
