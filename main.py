@@ -375,7 +375,7 @@ def main():
     normMax = 1
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
     rtol=1e-3
-    atol=1e-4
+    atol=1e-5
 
     t_max = int(2e9) # Maximum time for numerical integration limit
     '''
