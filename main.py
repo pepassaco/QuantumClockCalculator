@@ -165,6 +165,7 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
     rcParams['axes.grid'] = True
     rcParams['grid.alpha'] = 0.3
     rcParams['axes.facecolor'] = '#f0f0f0'
+    rcParams['text.latex.preamble'] = r"\usepackage{amsmath} \usepackage{amssymb}"
 
     # Create the plot
     fig, ax = plt.subplots()
@@ -350,26 +351,40 @@ def main():
     # Paramters for studying large ||V||
     '''
 
-    
+    '''
     # Paramters for studying medium ||V||
     nNorms = int(1e3) # Number of different norms to study
-    normMin = 2
-    normMax = int(1e8)
+    normMin = 1
+    normMax = 5e4
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
     rtol=1e-7
     atol=1e-10
 
-    t_max = int(3e3) # Maximum time for numerical integration limit
-    
-
+    t_max = int(1e6) # Maximum time for numerical integration limit
     '''
+
+    
     # Paramters for studying small ||V||
     nNorms = int(1e3) # Number of different norms to study
     normMin = 1e-5
-    normMax = 2
+    normMax = 1
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
+    rtol=1e-3
+    atol=1e-4
 
-    t_max = int(2e4) # Maximum time for numerical integration limit
+    t_max = int(2e6) # Maximum time for numerical integration limit
+    
+
+    '''
+    # Paramters for studying very small ||V||
+    nNorms = int(5e2) # Number of different norms to study
+    normMin = 1e-9
+    normMax = 1e-5
+    logSep = True # True for logarithmic spacing between norms, False for linear spacing
+    rtol=1e-3
+    atol=1e-3
+
+    t_max = int(1e10) # Maximum time for numerical integration limit
     '''
 
     axvlineHypo = None
@@ -413,21 +428,28 @@ def main():
             # Calculate expected values
             exp_Xmu, exp_Xsigma = np.real(compute_expected_values(rho, Xmu, Xsigma))
 
-            computedNorms.append(norm)
-            EXmu_norms.append(exp_Xmu)
-            EXsigma_norms.append(exp_Xsigma)
-            quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
+            # TODO: Fix these if statements
+            if computedNorms is not None and norm < computedNorms[index]:
+                computedNorms.insert(index,norm)
+                EXmu_norms.insert(index,exp_Xmu)
+                EXsigma_norms.insert(index,exp_Xsigma)
+                quotSigmaMu2.insert(index,exp_Xsigma/(exp_Xmu)**2)
+            elif computedNorms is not None and norm > computedNorms[-1-index]:
+                computedNorms.append(norm)
+                EXmu_norms.append(exp_Xmu)
+                EXsigma_norms.append(exp_Xsigma)
+                quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
 
             save_array(computedNorms, name+"norms", directory='./data/')
             save_array(EXmu_norms, name+"mus", directory='./data/')
             save_array(EXsigma_norms, name+"sigmas", directory='./data/')
             save_array(quotSigmaMu2, name+"quotients", directory='./data/')
 
-            create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs V", xlabel=r"V", ylabel=r"$\mu$", 
+            create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mu$", 
                                 err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'mu.pdf')
-            create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma$ vs V", xlabel=r"V", ylabel=r"$\sigma$", 
+            create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mathbb{E}[t^2]$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mathbb{E}[t^2]$", 
                                 err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'sigma.pdf')
-            create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\sigma/\mu^2$ vs V", xlabel=r"V", ylabel=r"$\sigma/\mu^2$", 
+            create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mathbb{E}[t^2] / \mu^2$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mathbb{E}[t^2] / \mu^2$", 
                                 err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'quot.pdf')
 
 
