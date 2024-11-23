@@ -121,7 +121,7 @@ def compute_expected_values(rho, Xmu, Xsigma):
     expected_Xsigma = np.trace(rho @ Xsigma)
     return expected_Xmu, expected_Xsigma
 
-def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xlabel="x", ylabel="y", 
+def create_plot(x_data, y_data, axvlineHypo=None, logScaleX = False, logScaleY = False, title="", xlabel="x", ylabel="y", 
                          err=None, figure_size=(8, 6), save_path=None):
     """
     Create a publication-quality scientific plot.
@@ -132,6 +132,12 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
         Data for x-axis
     y_data : array-like
         Data for y-axis
+    axvlineHypo : float, optional
+        Draws a vertical line here
+    logScaleX : boolean, optional
+        Log scale for axis X
+    logScaleY : boolean, optional
+        Log scale for axis Y
     axvlineHypo : float
         Draws a vertical line here
     title : str, optional
@@ -186,8 +192,10 @@ def create_plot(x_data, y_data, axvlineHypo=None, logScale = False, title="", xl
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    if logScale:
+    if logScaleX:
         ax.set_xscale('log')
+    if logScaleY:
+        ax.set_yscale('log')
     # Adjust layout
     plt.tight_layout()
     
@@ -257,7 +265,7 @@ def load_array(filename, directory='./data/'):
     # Load array if exists, otherwise return empty array
     return np.load(full_path) if os.path.exists(full_path) else np.array([])
 
-def save_array(array, filename, directory='.'):
+def save_array(array, filename, directory='./data/'):
     """
     Save a numpy array to a file.
     
@@ -281,11 +289,11 @@ def save_array(array, filename, directory='.'):
     np.save(full_path, array)
     #print(f"Array saved to: {full_path}")
 
-def load_data(prefix, directory='./data/'):
-    norms = load_array(prefix+"norms.npy", directory).tolist()
-    mus = load_array(prefix+"mus.npy", directory).tolist()
-    sigmas = load_array(prefix+"sigmas.npy", directory).tolist()
-    quotients = load_array(prefix+"quotients.npy", directory).tolist()
+def load_data(filenames, directory='./data/'):
+    norms = load_array(filenames[0]+".npy", directory).tolist()
+    mus = load_array(filenames[1]+".npy", directory).tolist()
+    sigmas = load_array(filenames[2]+".npy", directory).tolist()
+    quotients = load_array(filenames[3]+".npy", directory).tolist()
 
     return [norms, mus, sigmas, quotients]
 
@@ -347,23 +355,20 @@ def main():
     phaseOp = True  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
     phasePsi = True  # Flag for turning the density matrix of the initial state into the kv-th phase state. Uniformly random density matrix if False
 
-    '''
-    # Paramters for studying large ||V||
-    '''
 
     '''
-    # Paramters for studying medium ||V||
+    # Paramters for studying large ||V||
     nNorms = int(1e3) # Number of different norms to study
     normMin = 1
-    normMax = 5e4
+    normMax = 1e5
     logSep = True # True for logarithmic spacing between norms, False for linear spacing
     rtol=1e-7
     atol=1e-10
 
-    t_max = int(1e6) # Maximum time for numerical integration limit
+    t_max = int(1e8) # Maximum time for numerical integration limit
     '''
 
-    
+    '''
     # Paramters for studying small ||V||
     nNorms = int(1e3) # Number of different norms to study
     normMin = 1e-5
@@ -372,26 +377,24 @@ def main():
     rtol=1e-3
     atol=1e-4
 
-    t_max = int(2e6) # Maximum time for numerical integration limit
+    t_max = int(2e9) # Maximum time for numerical integration limit
+    '''
+
     
-
-    '''
-    # Paramters for studying very small ||V||
-    nNorms = int(5e2) # Number of different norms to study
-    normMin = 1e-9
-    normMax = 1e-5
-    logSep = True # True for logarithmic spacing between norms, False for linear spacing
-    rtol=1e-3
-    atol=1e-3
-
-    t_max = int(1e10) # Maximum time for numerical integration limit
-    '''
 
     axvlineHypo = None
 
+    sufix = "f_"+str(f)+"_d_"+str(d)+"_"
     name = "phaseEigenstate_" if phaseOp else "random_"
     logString = "logScale_" if  logSep else "linScale_"
-    
+    endings = ["norms", "mus", "sigmas", "quotients"]
+    filenames = [name+sufix+logString+ending for ending in endings]
+
+    directory_data = "./data/"
+    directory_plots = "./plots/"
+
+
+
     # Create Hamiltonian
     H = create_harmonic_oscillator(d,f)
     
@@ -415,7 +418,7 @@ def main():
 
     normsV = np.geomspace(normMin, normMax, nNorms) if logSep else np.linspace(normMin, normMax, nNorms)
 
-    [computedNorms, EXmu_norms, EXsigma_norms, quotSigmaMu2] = load_data(name, './data/')
+    [computedNorms, EXmu_norms, EXsigma_norms, quotSigmaMu2] = load_data(filenames, directory_data)
     start_time = time.time()
 
     for index, norm in enumerate(normsV):
@@ -440,17 +443,17 @@ def main():
                 EXsigma_norms.append(exp_Xsigma)
                 quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
 
-            save_array(computedNorms, name+"norms", directory='./data/')
-            save_array(EXmu_norms, name+"mus", directory='./data/')
-            save_array(EXsigma_norms, name+"sigmas", directory='./data/')
-            save_array(quotSigmaMu2, name+"quotients", directory='./data/')
+            save_array(computedNorms, filenames[0], directory=directory_data)
+            save_array(EXmu_norms, filenames[1], directory=directory_data)
+            save_array(EXsigma_norms, filenames[2], directory=directory_data)
+            save_array(quotSigmaMu2, filenames[3], directory=directory_data)
 
-            create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mu$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mu$", 
-                                err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'mu.pdf')
-            create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mathbb{E}[t^2]$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mathbb{E}[t^2]$", 
-                                err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'sigma.pdf')
-            create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScale=logSep, title=r"$\mathbb{E}[t^2] / \mu^2$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mathbb{E}[t^2] / \mu^2$", 
-                                err=None, figure_size=(8, 6), save_path='./plots/'+name+logString+'quot.pdf')
+            create_plot(computedNorms, EXmu_norms, axvlineHypo=axvlineHypo, logScaleX=logSep, logScaleY=True, title=r"$\mu$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mu$", 
+                                err=None, figure_size=(8, 6), save_path=directory_plots+filenames[1]+'.pdf')
+            create_plot(computedNorms, EXsigma_norms, axvlineHypo=axvlineHypo, logScaleX=logSep, logScaleY=True, title=r"$\mathbb{E}[t^2]$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mathbb{E}[t^2]$", 
+                                err=None, figure_size=(8, 6), save_path=directory_plots+filenames[2]+'.pdf')
+            create_plot(computedNorms, quotSigmaMu2, axvlineHypo=axvlineHypo, logScaleX=logSep, logScaleY=False, title=r"$\mathbb{E}[t^2] / \mu^2$ vs $\lvert\lvert V\rvert\rvert$", xlabel=r"$\lvert\lvert V\rvert\rvert$", ylabel=r"$\mathbb{E}[t^2] / \mu^2$", 
+                                err=None, figure_size=(8, 6), save_path=directory_plots+filenames[3]+'.pdf')
 
 
     progress_bar(len(normsV), len(normsV), start_time)
