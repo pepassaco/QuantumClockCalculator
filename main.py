@@ -352,7 +352,7 @@ def main():
     f = 10 # Frecuencia de H
     ko = d-1  # Index for V's phase operator eigenstate
     kv = 0  # Index for initial density matrix phase operator eigenstate
-    phaseOp = True  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
+    phaseOp = False  # Flag for turning the V operator into a projector of the ko-th phase state. Uniformly random positive semidefinite operator if False
     phasePsi = True  # Flag for turning the density matrix of the initial state into the kv-th phase state. Uniformly random density matrix if False
 
 
@@ -379,6 +379,16 @@ def main():
 
     t_max = int(2e9) # Maximum time for numerical integration limit
     '''
+
+    # Paramters for studying random V
+    nNorms = int(2e3) # Number of different norms to study
+    normMin = 1e-5
+    normMax = 1e5
+    logSep = True # True for logarithmic spacing between norms, False for linear spacing
+    rtol=1e-4
+    atol=1e-8
+
+    t_max = int(2e9) # Maximum time for numerical integration limit
 
     
 
@@ -432,12 +442,17 @@ def main():
             exp_Xmu, exp_Xsigma = np.real(compute_expected_values(rho, Xmu, Xsigma))
 
             # TODO: Fix these if statements
-            if computedNorms is not None and norm < computedNorms[index]:
+            if len(computedNorms) <= index:
+                computedNorms.append(norm)
+                EXmu_norms.append(exp_Xmu)
+                EXsigma_norms.append(exp_Xsigma)
+                quotSigmaMu2.append(exp_Xsigma/(exp_Xmu)**2)
+            elif len(computedNorms) > 0 and norm < computedNorms[index]:
                 computedNorms.insert(index,norm)
                 EXmu_norms.insert(index,exp_Xmu)
                 EXsigma_norms.insert(index,exp_Xsigma)
                 quotSigmaMu2.insert(index,exp_Xsigma/(exp_Xmu)**2)
-            elif computedNorms is not None and norm > computedNorms[-1-index]:
+            elif len(computedNorms) > 0 and norm > computedNorms[-1-index]:
                 computedNorms.append(norm)
                 EXmu_norms.append(exp_Xmu)
                 EXsigma_norms.append(exp_Xsigma)
